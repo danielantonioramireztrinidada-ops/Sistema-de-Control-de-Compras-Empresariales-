@@ -7,5 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="..\SistemaCompras.Domain\SistemaCompras.Domain.csproj" />
     <ProjectReference Include="..\SistemaCompras.Infrastructure\SistemaCompras.Infrastructure.csproj" />
+    <ProjectReference Include="..\SistemaCompras.Application\SistemaCompras.Application.csproj" />
   </ItemGroup>
 </Project>

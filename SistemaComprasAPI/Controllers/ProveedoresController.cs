@@ -1,8 +1,8 @@
 
 using Microsoft.AspNetCore.Mvc;
-using SistemaCompras.Domain.Entities;
-using SistemaCompras.Infrastructure.Interfaces;
-using SistemaCompras.Infrastructure.Models;
+using System.ComponentModel.DataAnnotations;
+using SistemaCompras.Application.Contract;
+using SistemaCompras.Application.Dtos;
 
 namespace SistemaComprasAPI.Controllers;
 
@@ -10,68 +10,55 @@ namespace SistemaComprasAPI.Controllers;
 [Route("api/[controller]")]
 public class ProveedoresController : ControllerBase
 {
-    private readonly IProveedorRepository _proveedorRepository;
+    private readonly IProveedorService _proveedorService;
 
-    public ProveedoresController(
-        IProveedorRepository proveedorRepository)
+    public ProveedoresController(IProveedorService proveedorService)
     {
-        _proveedorRepository = proveedorRepository;
+        _proveedorService = proveedorService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetProveedores()
     {
-        var proveedores = await _proveedorRepository.GetAllAsync();
+        var proveedores = await _proveedorService.GetAllAsync();
 
-        return Ok(proveedores.Select(p => new ProveedorDto
-        {
-            Id = p.Id,
-            Nombre = p.Nombre,
-            Telefono = p.Telefono,
-            Correo = p.Correo
-        }));
+        return Ok(proveedores);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetProveedor(int id)
     {
-        var p = await _proveedorRepository.GetByIdAsync(id);
-
-        if (p == null)
-            return NotFound();
-
-        return Ok(new ProveedorDto
+        try
         {
-            Id = p.Id,
-            Nombre = p.Nombre,
-            Telefono = p.Telefono,
-            Correo = p.Correo
-        });
+            var proveedor = await _proveedorService.GetByIdAsync(id);
+
+            if (proveedor == null)
+                return NotFound();
+
+            return Ok(proveedor);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost]
-    public async Task<IActionResult> CrearProveedor(
-        CrearProveedorDto dto)
+    public async Task<IActionResult> CrearProveedor(CrearProveedorDto dto)
     {
-        var p = new Proveedor
+        try
         {
-            Nombre = dto.Nombre,
-            Telefono = dto.Telefono,
-            Correo = dto.Correo
-        };
+            var proveedor = await _proveedorService.CreateAsync(dto);
 
-        await _proveedorRepository.AddAsync(p);
-
-        return CreatedAtAction(
-            nameof(GetProveedor),
-            new { id = p.Id },
-            new ProveedorDto
-            {
-                Id = p.Id,
-                Nombre = p.Nombre,
-                Telefono = p.Telefono,
-                Correo = p.Correo
-            });
+            return CreatedAtAction(
+                nameof(GetProveedor),
+                new { id = proveedor.Id },
+                proveedor);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("{id}")]
@@ -79,33 +66,44 @@ public class ProveedoresController : ControllerBase
         int id,
         ActualizarProveedorDto dto)
     {
-        var p = await _proveedorRepository.GetByIdAsync(id);
+        try
+        {
+            var actualizado = await _proveedorService.UpdateAsync(id, dto);
 
-        if (p == null)
-            return NotFound();
+            if (!actualizado)
+                return NotFound();
 
-        p.Nombre = dto.Nombre;
-        p.Telefono = dto.Telefono;
-        p.Correo = dto.Correo;
-
-        await _proveedorRepository.UpdateAsync(p);
-
-        return NoContent();
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> EliminarProveedor(int id)
     {
-        var p = await _proveedorRepository.GetByIdAsync(id);
+        try
+        {
+            var eliminado = await _proveedorService.DeleteAsync(id);
 
-        if (p == null)
-            return NotFound();
+            if (!eliminado)
+                return NotFound();
 
-        if (await _proveedorRepository.HasComprasAsync(id))
-            return Conflict("El proveedor tiene compras registradas.");
-
-        await _proveedorRepository.DeleteAsync(p);
-
-        return NoContent();
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
+        }
     }
 }

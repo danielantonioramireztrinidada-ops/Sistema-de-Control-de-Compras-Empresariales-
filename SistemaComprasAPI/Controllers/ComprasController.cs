@@ -1,8 +1,8 @@
 
 using Microsoft.AspNetCore.Mvc;
-using SistemaCompras.Domain.Entities;
-using SistemaCompras.Infrastructure.Interfaces;
-using SistemaCompras.Infrastructure.Models;
+using System.ComponentModel.DataAnnotations;
+using SistemaCompras.Application.Contract;
+using SistemaCompras.Application.Dtos;
 
 namespace SistemaComprasAPI.Controllers;
 
@@ -10,125 +10,96 @@ namespace SistemaComprasAPI.Controllers;
 [Route("api/[controller]")]
 public class ComprasController : ControllerBase
 {
-    private readonly ICompraRepository _compraRepository;
+    private readonly ICompraService _compraService;
 
-    public ComprasController(ICompraRepository compraRepository)
+    public ComprasController(ICompraService compraService)
     {
-        _compraRepository = compraRepository;
+        _compraService = compraService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetCompras()
     {
-        var compras = await _compraRepository.GetAllWithProveedorAsync();
+        var compras = await _compraService.GetAllAsync();
 
-        return Ok(compras.Select(c => new CompraDto
-        {
-            Id = c.Id,
-            Descripcion = c.Descripcion,
-            Monto = c.Monto,
-            Fecha = c.Fecha,
-            ProveedorId = c.ProveedorId,
-            NombreProveedor = c.Proveedor!.Nombre
-        }));
+        return Ok(compras);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCompra(int id)
     {
-        var c = await _compraRepository.GetByIdWithProveedorAsync(id);
-
-        if (c == null)
-            return NotFound();
-
-        return Ok(new CompraDto
+        try
         {
-            Id = c.Id,
-            Descripcion = c.Descripcion,
-            Monto = c.Monto,
-            Fecha = c.Fecha,
-            ProveedorId = c.ProveedorId,
-            NombreProveedor = c.Proveedor!.Nombre
-        });
+            var compra = await _compraService.GetByIdAsync(id);
+
+            if (compra == null)
+                return NotFound();
+
+            return Ok(compra);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost]
     public async Task<IActionResult> CrearCompra(CrearCompraDto dto)
     {
-        if (dto.Monto <= 0)
-            return BadRequest("El monto debe ser mayor que cero.");
-
-        var proveedorExiste = await _compraRepository
-            .ProveedorExistsAsync(dto.ProveedorId);
-
-        if (!proveedorExiste)
-            return BadRequest("El proveedor indicado no existe.");
-
-        var compra = new Compra
+        try
         {
-            Descripcion = dto.Descripcion,
-            Monto = dto.Monto,
-            Fecha = dto.Fecha,
-            ProveedorId = dto.ProveedorId
-        };
+            var compra = await _compraService.CreateAsync(dto);
 
-        await _compraRepository.AddAsync(compra);
-
-        var compraCreada = await _compraRepository
-            .GetByIdWithProveedorAsync(compra.Id);
-
-        return CreatedAtAction(
-            nameof(GetCompra),
-            new { id = compra.Id },
-            new CompraDto
-            {
-                Id = compra.Id,
-                Descripcion = compra.Descripcion,
-                Monto = compra.Monto,
-                Fecha = compra.Fecha,
-                ProveedorId = compra.ProveedorId,
-                NombreProveedor = compraCreada!.Proveedor!.Nombre
-            });
+            return CreatedAtAction(
+                nameof(GetCompra),
+                new { id = compra.Id },
+                compra);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> ActualizarCompra(
-        int id, ActualizarCompraDto dto)
+        int id,
+        ActualizarCompraDto dto)
     {
-        var compra = await _compraRepository.GetByIdAsync(id);
+        try
+        {
+            var actualizado = await _compraService.UpdateAsync(id, dto);
 
-        if (compra == null)
-            return NotFound();
+            if (!actualizado)
+                return NotFound();
 
-        if (dto.Monto <= 0)
-            return BadRequest("El monto debe ser mayor que cero.");
-
-        var proveedorExiste = await _compraRepository
-            .ProveedorExistsAsync(dto.ProveedorId);
-
-        if (!proveedorExiste)
-            return BadRequest("El proveedor indicado no existe.");
-
-        compra.Descripcion = dto.Descripcion;
-        compra.Monto = dto.Monto;
-        compra.Fecha = dto.Fecha;
-        compra.ProveedorId = dto.ProveedorId;
-
-        await _compraRepository.UpdateAsync(compra);
-
-        return NoContent();
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> EliminarCompra(int id)
     {
-        var compra = await _compraRepository.GetByIdAsync(id);
+        try
+        {
+            var eliminado = await _compraService.DeleteAsync(id);
 
-        if (compra == null)
-            return NotFound();
+            if (!eliminado)
+                return NotFound();
 
-        await _compraRepository.DeleteAsync(compra);
-
-        return NoContent();
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

@@ -16,7 +16,7 @@ Sistema web desarrollado con ASP.NET Core Web API para gestionar proveedores y c
 
 ## Arquitectura del proyecto
 
-El sistema está organizado mediante una arquitectura de tres capas:
+El sistema utiliza una arquitectura por capas, organizada en los siguientes proyectos:
 
 ### 1. SistemaCompras.Domain
 
@@ -35,7 +35,17 @@ Contiene los componentes encargados del acceso y manejo de datos.
 - Modelos de transferencia de datos (DTO).
 - Excepciones personalizadas.
 
-### 3. SistemaComprasAPI
+### 3. SistemaCompras.Application
+
+Contiene la lógica de negocio y la capa de servicios.
+
+- `Contract`: interfaces de los servicios de negocio.
+- `Dtos`: objetos de transferencia de datos para crear, actualizar y consultar proveedores y compras.
+- `Services`: implementación de los servicios de proveedores y compras.
+- Validaciones de los campos de las entidades.
+- Reglas de negocio para proteger la integridad de los datos.
+
+### 4. SistemaComprasAPI
 
 Contiene la capa de presentación y exposición de servicios REST.
 
@@ -64,15 +74,16 @@ Contiene la capa de presentación y exposición de servicios REST.
 - Eliminar compras.
 - Mostrar el nombre del proveedor asociado a cada compra.
 
-## Reglas de negocio
+## Validaciones y reglas de negocio
 
-El sistema implementa las siguientes validaciones:
-
-1. El monto de una compra debe ser mayor que cero.
-2. No se permite registrar una compra si el proveedor indicado no existe.
-3. No se permite actualizar una compra asignándole un proveedor inexistente.
-4. No se permite eliminar un proveedor que tenga compras registradas.
-5. Se utiliza una relación entre proveedores y compras con restricción de eliminación para proteger la integridad referencial.
+- El nombre del proveedor es obligatorio y debe tener entre 2 y 100 caracteres.
+- El teléfono del proveedor es obligatorio y debe tener un formato válido.
+- El correo del proveedor es obligatorio y debe tener un formato válido.
+- La descripción de una compra debe tener entre 3 y 200 caracteres.
+- El monto de una compra debe ser mayor que cero.
+- La fecha de la compra es obligatoria.
+- El proveedor asociado a una compra debe existir.
+- No se permite eliminar un proveedor que tenga compras registradas.
 
 ## Base de datos
 
