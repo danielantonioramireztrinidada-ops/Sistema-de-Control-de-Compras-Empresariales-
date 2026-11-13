@@ -1,8 +1,8 @@
+
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SistemaComprasAPI.Data;
-using SistemaComprasAPI.DTOs;
-using SistemaComprasAPI.Models;
+using SistemaCompras.Domain.Entities;
+using SistemaCompras.Infrastructure.Interfaces;
+using SistemaCompras.Infrastructure.Models;
 
 namespace SistemaComprasAPI.Controllers;
 
@@ -10,17 +10,19 @@ namespace SistemaComprasAPI.Controllers;
 [Route("api/[controller]")]
 public class ProveedoresController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IProveedorRepository _proveedorRepository;
 
-    public ProveedoresController(ApplicationDbContext context)
+    public ProveedoresController(
+        IProveedorRepository proveedorRepository)
     {
-        _context = context;
+        _proveedorRepository = proveedorRepository;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetProveedores()
     {
-        var proveedores = await _context.Proveedores.ToListAsync();
+        var proveedores = await _proveedorRepository.GetAllAsync();
+
         return Ok(proveedores.Select(p => new ProveedorDto
         {
             Id = p.Id,
@@ -33,7 +35,7 @@ public class ProveedoresController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetProveedor(int id)
     {
-        var p = await _context.Proveedores.FindAsync(id);
+        var p = await _proveedorRepository.GetByIdAsync(id);
 
         if (p == null)
             return NotFound();
@@ -48,7 +50,8 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CrearProveedor(CrearProveedorDto dto)
+    public async Task<IActionResult> CrearProveedor(
+        CrearProveedorDto dto)
     {
         var p = new Proveedor
         {
@@ -57,10 +60,11 @@ public class ProveedoresController : ControllerBase
             Correo = dto.Correo
         };
 
-        _context.Proveedores.Add(p);
-        await _context.SaveChangesAsync();
+        await _proveedorRepository.AddAsync(p);
 
-        return CreatedAtAction(nameof(GetProveedor), new { id = p.Id },
+        return CreatedAtAction(
+            nameof(GetProveedor),
+            new { id = p.Id },
             new ProveedorDto
             {
                 Id = p.Id,
@@ -72,9 +76,10 @@ public class ProveedoresController : ControllerBase
 
     [HttpPut("{id}")]
     public async Task<IActionResult> ActualizarProveedor(
-        int id, ActualizarProveedorDto dto)
+        int id,
+        ActualizarProveedorDto dto)
     {
-        var p = await _context.Proveedores.FindAsync(id);
+        var p = await _proveedorRepository.GetByIdAsync(id);
 
         if (p == null)
             return NotFound();
@@ -83,23 +88,23 @@ public class ProveedoresController : ControllerBase
         p.Telefono = dto.Telefono;
         p.Correo = dto.Correo;
 
-        await _context.SaveChangesAsync();
+        await _proveedorRepository.UpdateAsync(p);
+
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> EliminarProveedor(int id)
     {
-        var p = await _context.Proveedores.FindAsync(id);
+        var p = await _proveedorRepository.GetByIdAsync(id);
 
         if (p == null)
             return NotFound();
 
-        if (await _context.Compras.AnyAsync(c => c.ProveedorId == id))
+        if (await _proveedorRepository.HasComprasAsync(id))
             return Conflict("El proveedor tiene compras registradas.");
 
-        _context.Proveedores.Remove(p);
-        await _context.SaveChangesAsync();
+        await _proveedorRepository.DeleteAsync(p);
 
         return NoContent();
     }

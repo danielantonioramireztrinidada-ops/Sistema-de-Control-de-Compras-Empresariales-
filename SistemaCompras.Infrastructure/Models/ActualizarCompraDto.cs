@@ -1,6 +1,6 @@
-namespace SistemaComprasAPI.DTOs;
+namespace SistemaCompras.Infrastructure.Models;
 
-public class CrearCompraDto
+public class ActualizarCompraDto
 {
     public string Descripcion { get; set; } = string.Empty;
     public decimal Monto { get; set; }

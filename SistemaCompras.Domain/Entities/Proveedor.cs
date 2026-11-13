@@ -1,10 +1,10 @@
 
-namespace SistemaComprasAPI.Models;
+using SistemaCompras.Domain.Core;
 
-public class Proveedor
+namespace SistemaCompras.Domain.Entities;
+
+public class Proveedor : BaseEntity
 {
-    public int Id { get; set; }
-
     public string Nombre { get; set; } = string.Empty;
 
     public string Telefono { get; set; } = string.Empty;
